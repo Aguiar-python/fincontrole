@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block titulo %}Fatura {{ cartao.nome }} — FinControle{% endblock %}
+{% block cabecalho %}Fatura · {{ cartao.nome }}{% endblock %}
+
+{% block conteudo %}
+<div class="page-actions">
+  <div class="month-nav" style="margin:0;">
+    <a href="{{ url_for('cartoes.fatura', cartao_id=cartao.id, mes=mes_anterior) }}"><i data-lucide="chevron-left"></i></a>
+    <span class="month-label">{{ mes_label }}</span>
+    <a href="{{ url_for('cartoes.fatura', cartao_id=cartao.id, mes=mes_seguinte) }}"><i data-lucide="chevron-right"></i></a>
+  </div>
+  <a href="{{ url_for('cartoes.index') }}" class="btn btn-ghost">
+    <i data-lucide="arrow-left"></i> Voltar aos cartões
+  </a>
+</div>
+
+<div class="credit-card-tile" style="background: linear-gradient(135deg, {{ cartao.cor }} 0%, {{ cartao.cor }}cc 100%); margin-bottom:18px; max-width:420px;">
+  <div class="cc-top">
+    <div>
+      <div class="cc-name">{{ cartao.nome }}</div>
+      <div class="cc-flag">{{ cartao.bandeira or 'Cartão de crédito' }}</div>
+    </div>
+    <i data-lucide="credit-card" style="opacity:.8;"></i>
+  </div>
+  <div>
+    <div class="cc-value">R$ {{ '%.2f'|format(total) | replace('.', ',') }}</div>
+    <div class="cc-sub">
+      Fatura de {{ mes_label }} · vence dia {{ cartao.dia_vencimento }}
+      {% if cartao.limite and cartao.limite|float > 0 %}
+        <br>Limite disponível: R$ {{ '%.2f'|format(cartao.limite|float - total) | replace('.', ',') }}
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h3 class="card-title">Compras nesta fatura ({{ itens|length }})</h3>
+  {% if itens %}
+    <div class="list">
+      {% for i in itens %}
+      <div class="list-item">
+        <div class="li-left">
+          <span class="li-dot" style="background: {{ i.categoria_cor or '#94a3b8' }};"></span>
+          <div class="li-text">
+            <strong>
+              {{ i.descricao }}
+              {% if i.total_parcelas > 1 %}<span style="color:var(--ink-soft);font-weight:500;"> ({{ i.parcela_atual }}/{{ i.total_parcelas }})</span>{% endif %}
+            </strong>
+            <span>{{ i.data_compra.strftime('%d/%m/%Y') }} · {{ i.categoria_nome or 'Sem categoria' }}</span>
+          </div>
+        </div>
+        <span class="li-value">R$ {{ '%.2f'|format(i.valor|float) | replace('.', ',') }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <i data-lucide="file-text"></i>
+      <p>Nenhuma compra nesta fatura.</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

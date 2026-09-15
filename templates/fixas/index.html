@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block titulo %}Despesas fixas — FinControle{% endblock %}
+{% block cabecalho %}Despesas fixas{% endblock %}
+
+{% block conteudo %}
+<div class="page-actions">
+  <p style="color:var(--ink-soft);font-size:.9rem;margin:0;">
+    Lançadas automaticamente todo mês (aluguel, assinaturas, escola…).
+  </p>
+  <button class="btn btn-primary" onclick="novaFixa()">
+    <i data-lucide="plus"></i> Nova despesa fixa
+  </button>
+</div>
+
+<div class="card stat-card" style="margin-bottom:18px;">
+  <span class="stat-label">Comprometido por mês</span>
+  <span class="stat-value">R$ {{ '%.2f'|format(total_mensal) | replace('.', ',') }}</span>
+  <span class="stat-sub">{{ fixas | selectattr('ativa') | list | length }} despesa(s) ativa(s)</span>
+</div>
+
+<div class="card">
+  <h3 class="card-title">Suas despesas fixas</h3>
+  {% if fixas %}
+    <div class="list">
+      {% for f in fixas %}
+      <div class="list-item" {{ 'style=opacity:.5' if not f.ativa }}>
+        <div class="li-left">
+          <span class="li-dot" style="background: {{ f.categoria_cor or '#94a3b8' }};"></span>
+          <div class="li-text">
+            <strong>{{ f.descricao }}</strong>
+            <span>
+              Todo dia {{ f.dia_vencimento }} ·
+              {{ f.categoria_nome or 'Sem categoria' }} ·
+              {{ f.cartao_nome or FORMAS_PAGAMENTO.get(f.forma_pagamento, f.forma_pagamento) }}
+            </span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="li-value">R$ {{ '%.2f'|format(f.valor|float) | replace('.', ',') }}</span>
+          <a href="{{ url_for('fixas.alternar', fixa_id=f.id) }}" title="{{ 'Pausar' if f.ativa else 'Ativar' }}"
+             class="btn btn-ghost btn-icon">
+            <i data-lucide="{{ 'pause' if f.ativa else 'play' }}" style="width:15px;height:15px;"></i>
+          </a>
+          <a href="#" class="btn btn-ghost btn-icon"
+             onclick='editarFixa({{ {
+               "id": f.id, "descricao": f.descricao, "valor": f.valor|float,
+               "dia_vencimento": f.dia_vencimento, "categoria_id": f.categoria_id or "",
+               "forma_pagamento": f.forma_pagamento, "cartao_id": f.cartao_id or "" } | tojson }}); return false;'>
+            <i data-lucide="pencil" style="width:15px;height:15px;"></i>
+          </a>
+          <a href="{{ url_for('fixas.excluir', fixa_id=f.id) }}" class="btn btn-danger-ghost btn-icon"
+             onclick="return confirm('Remover esta despesa fixa?')">
+            <i data-lucide="trash-2" style="width:15px;height:15px;"></i>
+          </a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <i data-lucide="repeat"></i>
+      <p>Nenhuma despesa fixa cadastrada.</p>
+      <button class="btn btn-primary btn-sm" onclick="novaFixa()">Cadastrar a primeira</button>
+    </div>
+  {% endif %}
+</div>
+
+<!-- Modal Despesa Fixa -->
+<div class="modal-backdrop" id="modalFixa">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="tituloModalFixa">Nova despesa fixa</h3>
+      <button class="modal-close" onclick="fecharModal('modalFixa')"><i data-lucide="x"></i></button>
+    </div>
+    <form method="post" action="{{ url_for('fixas.salvar') }}">
+      <input type="hidden" name="id" id="fixa_id_hidden">
+      <div class="form-grid">
+        <div class="field full">
+          <label for="f_descricao">Descrição</label>
+          <input type="text" id="f_descricao" name="descricao" required placeholder="Ex.: Aluguel">
+        </div>
+        <div class="field">
+          <label for="f_valor">Valor mensal (R$)</label>
+          <input type="number" step="0.01" min="0.01" id="f_valor" name="valor" required>
+        </div>
+        <div class="field">
+          <label for="f_dia">Dia do vencimento</label>
+          <input type="number" min="1" max="28" id="f_dia" name="dia_vencimento" required value="5">
+        </div>
+        <div class="field">
+          <label for="f_categoria">Categoria</label>
+          <select id="f_categoria" name="categoria_id">
+            <option value="">Sem categoria</option>
+            {% for c in categorias %}
+            <option value="{{ c.id }}">{{ c.nome }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="f_forma">Forma de pagamento</label>
+          <select id="f_forma" name="forma_pagamento" onchange="alternarCamposCartao(this, ['wrapFixaCartao'])">
+            {% for chave, rotulo in FORMAS_PAGAMENTO.items() %}
+            <option value="{{ chave }}" {{ 'selected' if chave == 'debito' }}>{{ rotulo }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field full" id="wrapFixaCartao" style="display:none;">
+          <label for="f_cartao">Cartão</label>
+          <select id="f_cartao" name="cartao_id">
+            <option value="">Selecione…</option>
+            {% for ct in cartoes %}
+            <option value="{{ ct.id }}">{{ ct.nome }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="fecharModal('modalFixa')">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function novaFixa() {
+  document.getElementById('tituloModalFixa').textContent = 'Nova despesa fixa';
+  document.getElementById('fixa_id_hidden').value = '';
+  document.getElementById('f_descricao').value = '';
+  document.getElementById('f_valor').value = '';
+  document.getElementById('f_dia').value = 5;
+  document.getElementById('f_categoria').value = '';
+  document.getElementById('f_forma').value = 'debito';
+  document.getElementById('wrapFixaCartao').style.display = 'none';
+  abrirModal('modalFixa');
+}
+
+function editarFixa(d) {
+  document.getElementById('tituloModalFixa').textContent = 'Editar despesa fixa';
+  document.getElementById('fixa_id_hidden').value = d.id;
+  document.getElementById('f_descricao').value = d.descricao;
+  document.getElementById('f_valor').value = d.valor;
+  document.getElementById('f_dia').value = d.dia_vencimento;
+  document.getElementById('f_categoria').value = d.categoria_id;
+  document.getElementById('f_forma').value = d.forma_pagamento;
+  document.getElementById('f_cartao').value = d.cartao_id;
+  document.getElementById('wrapFixaCartao').style.display = d.forma_pagamento === 'cartao' ? '' : 'none';
+  abrirModal('modalFixa');
+}
+</script>
+{% endblock %}

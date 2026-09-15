@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block titulo %}Cartões — FinControle{% endblock %}
+{% block cabecalho %}Cartões de crédito{% endblock %}
+
+{% block conteudo %}
+<div class="page-actions">
+  <p style="color:var(--ink-soft);font-size:.9rem;margin:0;">
+    O dia de fechamento define em qual fatura cada compra vai cair.
+  </p>
+  <button class="btn btn-primary" onclick="novoCartao()">
+    <i data-lucide="plus"></i> Novo cartão
+  </button>
+</div>
+
+{% if cartoes %}
+<div class="grid grid-3">
+  {% for ct in cartoes %}
+  <div class="credit-card-tile" style="background: linear-gradient(135deg, {{ ct.cor }} 0%, {{ ct.cor }}cc 100%);">
+    <div class="cc-top">
+      <div>
+        <div class="cc-name">{{ ct.nome }}</div>
+        <div class="cc-flag">{{ ct.bandeira or 'Cartão de crédito' }}</div>
+      </div>
+      <i data-lucide="credit-card" style="opacity:.8;"></i>
+    </div>
+    <div>
+      <div class="cc-value">R$ {{ '%.2f'|format(ct.fatura_atual|float) | replace('.', ',') }}</div>
+      <div class="cc-sub">
+        Fatura atual · fecha dia {{ ct.dia_fechamento }} · vence dia {{ ct.dia_vencimento }}
+        {% if ct.limite and ct.limite|float > 0 %}
+          <br>Limite: R$ {{ '%.2f'|format(ct.limite|float) | replace('.', ',') }}
+          ({{ '%.0f'|format(ct.fatura_atual|float / ct.limite|float * 100) }}% usado)
+        {% endif %}
+      </div>
+    </div>
+    <div class="cc-actions">
+      <a href="{{ url_for('cartoes.fatura', cartao_id=ct.id) }}">Ver fatura</a>
+      <a href="#" onclick='editarCartao({{ {
+        "id": ct.id, "nome": ct.nome, "bandeira": ct.bandeira or "",
+        "limite": ct.limite|float, "dia_fechamento": ct.dia_fechamento,
+        "dia_vencimento": ct.dia_vencimento, "cor": ct.cor } | tojson }}); return false;'>Editar</a>
+      <a href="{{ url_for('cartoes.excluir', cartao_id=ct.id) }}"
+         onclick="return confirm('Remover este cartão?')">Excluir</a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card">
+  <div class="empty-state">
+    <i data-lucide="credit-card"></i>
+    <p>Nenhum cartão cadastrado ainda.</p>
+    <button class="btn btn-primary btn-sm" onclick="novoCartao()">Cadastrar primeiro cartão</button>
+  </div>
+</div>
+{% endif %}
+
+<!-- Modal Cartão -->
+<div class="modal-backdrop" id="modalCartao">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="tituloModalCartao">Novo cartão</h3>
+      <button class="modal-close" onclick="fecharModal('modalCartao')"><i data-lucide="x"></i></button>
+    </div>
+    <form method="post" action="{{ url_for('cartoes.salvar') }}">
+      <input type="hidden" name="id" id="cartao_id_hidden">
+      <div class="form-grid">
+        <div class="field full">
+          <label for="nome">Nome do cartão</label>
+          <input type="text" id="nome" name="nome" required placeholder="Ex.: Nubank Roxinho">
+        </div>
+        <div class="field">
+          <label for="bandeira">Bandeira</label>
+          <input type="text" id="bandeira" name="bandeira" placeholder="Visa, Mastercard…">
+        </div>
+        <div class="field">
+          <label for="limite">Limite (R$)</label>
+          <input type="number" step="0.01" min="0" id="limite" name="limite" placeholder="0,00">
+        </div>
+        <div class="field">
+          <label for="dia_fechamento">Dia do fechamento</label>
+          <input type="number" min="1" max="28" id="dia_fechamento" name="dia_fechamento" required value="10">
+        </div>
+        <div class="field">
+          <label for="dia_vencimento">Dia do vencimento</label>
+          <input type="number" min="1" max="28" id="dia_vencimento" name="dia_vencimento" required value="17">
+        </div>
+        <div class="field full">
+          <label for="cor">Cor do cartão</label>
+          <input type="color" id="cor" name="cor" value="#6366f1">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="fecharModal('modalCartao')">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Salvar cartão</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function novoCartao() {
+  document.getElementById('tituloModalCartao').textContent = 'Novo cartão';
+  document.getElementById('cartao_id_hidden').value = '';
+  document.getElementById('nome').value = '';
+  document.getElementById('bandeira').value = '';
+  document.getElementById('limite').value = '';
+  document.getElementById('dia_fechamento').value = 10;
+  document.getElementById('dia_vencimento').value = 17;
+  document.getElementById('cor').value = '#6366f1';
+  abrirModal('modalCartao');
+}
+
+function editarCartao(dados) {
+  document.getElementById('tituloModalCartao').textContent = 'Editar cartão';
+  document.getElementById('cartao_id_hidden').value = dados.id;
+  document.getElementById('nome').value = dados.nome;
+  document.getElementById('bandeira').value = dados.bandeira;
+  document.getElementById('limite').value = dados.limite;
+  document.getElementById('dia_fechamento').value = dados.dia_fechamento;
+  document.getElementById('dia_vencimento').value = dados.dia_vencimento;
+  document.getElementById('cor').value = dados.cor;
+  abrirModal('modalCartao');
+}
+</script>
+{% endblock %}

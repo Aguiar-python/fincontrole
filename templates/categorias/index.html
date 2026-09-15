@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block titulo %}Categorias — FinControle{% endblock %}
+{% block cabecalho %}Categorias{% endblock %}
+
+{% block conteudo %}
+<div class="page-actions">
+  <p style="color:var(--ink-soft);font-size:.9rem;margin:0;">
+    Organize seus gastos para enxergar para onde o dinheiro está indo.
+  </p>
+  <button class="btn btn-primary" onclick="novaCategoria()">
+    <i data-lucide="plus"></i> Nova categoria
+  </button>
+</div>
+
+<div class="card">
+  <h3 class="card-title">Suas categorias</h3>
+  <div class="list">
+    {% for c in categorias %}
+    <div class="list-item">
+      <div class="li-left">
+        <span class="li-dot" style="background: {{ c.cor }};"></span>
+        <div class="li-text">
+          <strong>{{ c.nome }}</strong>
+          <span>Total já gasto: R$ {{ '%.2f'|format(c.total_gasto|float) | replace('.', ',') }}</span>
+        </div>
+      </div>
+      <div class="li-actions">
+        <a href="#" class="btn btn-ghost btn-icon"
+           onclick='editarCategoria({{ {"id": c.id, "nome": c.nome, "cor": c.cor} | tojson }}); return false;'>
+          <i data-lucide="pencil" style="width:15px;height:15px;"></i>
+        </a>
+        <a href="{{ url_for('categorias.excluir', cat_id=c.id) }}" class="btn btn-danger-ghost btn-icon"
+           onclick="return confirm('Remover esta categoria?')">
+          <i data-lucide="trash-2" style="width:15px;height:15px;"></i>
+        </a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Modal Categoria -->
+<div class="modal-backdrop" id="modalCategoria">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="tituloModalCategoria">Nova categoria</h3>
+      <button class="modal-close" onclick="fecharModal('modalCategoria')"><i data-lucide="x"></i></button>
+    </div>
+    <form method="post" action="{{ url_for('categorias.salvar') }}">
+      <input type="hidden" name="id" id="categoria_id_hidden">
+      <div class="form-grid">
+        <div class="field full">
+          <label for="c_nome">Nome</label>
+          <input type="text" id="c_nome" name="nome" required placeholder="Ex.: Pet">
+        </div>
+        <div class="field full">
+          <label for="c_cor">Cor</label>
+          <input type="color" id="c_cor" name="cor" value="#64748b">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="fecharModal('modalCategoria')">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function novaCategoria() {
+  document.getElementById('tituloModalCategoria').textContent = 'Nova categoria';
+  document.getElementById('categoria_id_hidden').value = '';
+  document.getElementById('c_nome').value = '';
+  document.getElementById('c_cor').value = '#64748b';
+  abrirModal('modalCategoria');
+}
+
+function editarCategoria(d) {
+  document.getElementById('tituloModalCategoria').textContent = 'Editar categoria';
+  document.getElementById('categoria_id_hidden').value = d.id;
+  document.getElementById('c_nome').value = d.nome;
+  document.getElementById('c_cor').value = d.cor;
+  abrirModal('modalCategoria');
+}
+</script>
+{% endblock %}

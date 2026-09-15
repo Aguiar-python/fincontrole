@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block titulo %}Controle Financeiro{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+{% if current_user.is_authenticated %}
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <i data-lucide="wallet"></i>
+      <span>FinControle</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="{{ url_for('dashboard.index') }}" class="{{ 'active' if request.blueprint == 'dashboard' }}">
+        <i data-lucide="layout-dashboard"></i> Dashboard
+      </a>
+      <a href="{{ url_for('despesas.index') }}" class="{{ 'active' if request.blueprint == 'despesas' }}">
+        <i data-lucide="receipt"></i> Despesas
+      </a>
+      <a href="{{ url_for('cartoes.index') }}" class="{{ 'active' if request.blueprint == 'cartoes' }}">
+        <i data-lucide="credit-card"></i> Cartões
+      </a>
+      <a href="{{ url_for('fixas.index') }}" class="{{ 'active' if request.blueprint == 'fixas' }}">
+        <i data-lucide="repeat"></i> Despesas fixas
+      </a>
+      <a href="{{ url_for('categorias.index') }}" class="{{ 'active' if request.blueprint == 'categorias' }}">
+        <i data-lucide="tags"></i> Categorias
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-chip">
+        <div class="user-avatar">{{ current_user.nome[:1] | upper }}</div>
+        <div class="user-info">
+          <strong>{{ current_user.nome }}</strong>
+          <span>{{ current_user.email }}</span>
+        </div>
+      </div>
+      <a href="{{ url_for('auth.logout') }}" class="logout-link">
+        <i data-lucide="log-out"></i> Sair
+      </a>
+    </div>
+  </aside>
+
+  <div class="main-area">
+    <header class="topbar">
+      <button class="menu-toggle" id="menuToggle" aria-label="Abrir menu"><i data-lucide="menu"></i></button>
+      <h1>{% block cabecalho %}{% endblock %}</h1>
+    </header>
+    <main class="content">
+      {% with mensagens = get_flashed_messages(with_categories=true) %}
+        {% if mensagens %}
+          <div class="flash-stack">
+          {% for categoria, msg in mensagens %}
+            <div class="flash flash-{{ categoria }}">{{ msg }}</div>
+          {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+      {% block conteudo %}{% endblock %}
+    </main>
+  </div>
+</div>
+{% else %}
+  {% with mensagens = get_flashed_messages(with_categories=true) %}
+    {% if mensagens %}
+      <div class="flash-stack flash-stack-auth">
+      {% for categoria, msg in mensagens %}
+        <div class="flash flash-{{ categoria }}">{{ msg }}</div>
+      {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+  {% block conteudo_auth %}{% endblock %}
+{% endif %}
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>lucide.createIcons();</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>
