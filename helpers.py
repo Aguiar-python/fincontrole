@@ -1,5 +1,5 @@
 import uuid
-from datetime import date
+from datetime import date, datetime
 
 from dateutil.relativedelta import relativedelta
 
@@ -55,6 +55,9 @@ def criar_despesa_avulsa(usuario_id, descricao, valor, data_compra, categoria_id
     Cria uma despesa. Se for no cartão e parcelada, gera uma linha por parcela,
     cada uma com o mes_fatura correto (indo empurrando fatura a fatura).
     """
+    if isinstance(data_compra, str):
+        data_compra = datetime.strptime(data_compra, "%Y-%m-%d").date()
+
     total_parcelas = max(1, int(total_parcelas or 1))
 
     if forma_pagamento == "cartao" and cartao_id:
@@ -127,3 +130,5 @@ def garantir_despesas_fixas_do_mes(usuario_id, mes):
              fixa["categoria_id"], fixa["forma_pagamento"], fixa["cartao_id"],
              mes, fixa["id"]),
         )
+
+#"Corrige data das despesas"
