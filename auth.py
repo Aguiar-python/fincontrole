@@ -1,3 +1,6 @@
+import secrets
+import string
+
 from flask_login import UserMixin
 
 import db
@@ -6,6 +9,7 @@ import db
 class Usuario(UserMixin):
     def __init__(self, row):
         self.id = row["id"]
+        self.conta_id = row["conta_id"]
         self.nome = row["nome"]
         self.email = row["email"]
         self.senha_hash = row["senha_hash"]
@@ -39,10 +43,41 @@ CATEGORIAS_PADRAO = [
     ("Outros", "#64748b", "tag"),
 ]
 
+# Caracteres usados no código de convite: sem 0/O/1/I pra evitar confusão
+_ALFABETO_CONVITE = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
-def criar_categorias_padrao(usuario_id):
+
+def gerar_codigo_convite():
+    return "".join(secrets.choice(_ALFABETO_CONVITE) for _ in range(6))
+
+
+def criar_conta(nome_conta):
+    """Cria uma nova conta compartilhada e retorna (id, codigo_convite)."""
+    for _ in range(5):
+        codigo = gerar_codigo_convite()
+        ja_existe = db.query_one(
+            "SELECT id FROM contas WHERE codigo_convite=%s", (codigo,)
+        )
+        if not ja_existe:
+            nova = db.execute(
+                "INSERT INTO contas (nome, codigo_convite) VALUES (%s,%s) RETURNING id",
+                (nome_conta, codigo),
+            )
+            return nova["id"], codigo
+    raise RuntimeError("Não foi possível gerar um código de convite único.")
+
+
+def buscar_conta_por_codigo(codigo):
+    return db.query_one(
+        "SELECT * FROM contas WHERE codigo_convite=%s AND D_E_L_E_T=0",
+        ((codigo or "").strip().upper(),),
+    )
+
+
+def criar_categorias_padrao(conta_id, usuario_id):
     for nome, cor, icone in CATEGORIAS_PADRAO:
         db.execute(
-            "INSERT INTO categorias (usuario_id, nome, cor, icone) VALUES (%s,%s,%s,%s)",
-            (usuario_id, nome, cor, icone),
+            """INSERT INTO categorias (conta_id, usuario_id, nome, cor, icone)
+               VALUES (%s,%s,%s,%s,%s)""",
+            (conta_id, usuario_id, nome, cor, icone),
         )

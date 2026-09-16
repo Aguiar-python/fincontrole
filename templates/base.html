@@ -2,7 +2,15 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#5b5bf6">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FinControle">
+<link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+<link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
+<link rel="icon" href="{{ url_for('static', filename='icons/icon-192.png') }}">
 <title>{% block titulo %}Controle Financeiro{% endblock %}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -32,6 +40,9 @@
       </a>
       <a href="{{ url_for('categorias.index') }}" class="{{ 'active' if request.blueprint == 'categorias' }}">
         <i data-lucide="tags"></i> Categorias
+      </a>
+      <a href="{{ url_for('conta.index') }}" class="{{ 'active' if request.blueprint == 'conta' }}">
+        <i data-lucide="users"></i> Minha conta
       </a>
     </nav>
     <div class="sidebar-footer">
@@ -81,7 +92,12 @@
 {% endif %}
 
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
-<script>lucide.createIcons();</script>
+<script>
+  lucide.createIcons();
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register("{{ url_for('static', filename='service-worker.js') }}");
+  }
+</script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

@@ -2,8 +2,20 @@
 -- Controle Financeiro: Cartões de Crédito + Despesas Mensais
 -- =========================================================
 
+-- Uma "conta" é o espaço compartilhado (ex.: um casal usando o mesmo painel).
+-- Cada usuário pertence a uma conta; todos os dados (cartões, despesas etc.)
+-- são visíveis para todos os usuários da mesma conta.
+CREATE TABLE IF NOT EXISTS contas (
+    id                SERIAL PRIMARY KEY,
+    nome              VARCHAR(200) NOT NULL,
+    codigo_convite    VARCHAR(10) NOT NULL UNIQUE,
+    D_E_L_E_T         SMALLINT DEFAULT 0,
+    datestamp_insert  TIMESTAMP DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS usuarios (
     id                SERIAL PRIMARY KEY,
+    conta_id          INTEGER REFERENCES contas(id),
     nome              VARCHAR(200) NOT NULL,
     email             VARCHAR(200) NOT NULL UNIQUE,
     senha_hash        VARCHAR(300) NOT NULL,
@@ -12,9 +24,11 @@ CREATE TABLE IF NOT EXISTS usuarios (
     datestamp_insert  TIMESTAMP DEFAULT NOW(),
     datestamp_update  TIMESTAMP
 );
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS conta_id INTEGER REFERENCES contas(id);
 
 CREATE TABLE IF NOT EXISTS cartoes (
     id                SERIAL PRIMARY KEY,
+    conta_id          INTEGER REFERENCES contas(id),
     usuario_id        INTEGER NOT NULL REFERENCES usuarios(id),
     nome              VARCHAR(100) NOT NULL,
     bandeira          VARCHAR(50),
@@ -26,9 +40,11 @@ CREATE TABLE IF NOT EXISTS cartoes (
     datestamp_insert  TIMESTAMP DEFAULT NOW(),
     datestamp_update  TIMESTAMP
 );
+ALTER TABLE cartoes ADD COLUMN IF NOT EXISTS conta_id INTEGER REFERENCES contas(id);
 
 CREATE TABLE IF NOT EXISTS categorias (
     id                SERIAL PRIMARY KEY,
+    conta_id          INTEGER REFERENCES contas(id),
     usuario_id        INTEGER NOT NULL REFERENCES usuarios(id),
     nome              VARCHAR(100) NOT NULL,
     cor               VARCHAR(20) DEFAULT '#64748b',
@@ -36,10 +52,12 @@ CREATE TABLE IF NOT EXISTS categorias (
     D_E_L_E_T         SMALLINT DEFAULT 0,
     datestamp_insert  TIMESTAMP DEFAULT NOW()
 );
+ALTER TABLE categorias ADD COLUMN IF NOT EXISTS conta_id INTEGER REFERENCES contas(id);
 
 -- Modelos de despesas fixas (assinaturas, aluguel, etc.) que se repetem todo mês
 CREATE TABLE IF NOT EXISTS despesas_fixas (
     id                SERIAL PRIMARY KEY,
+    conta_id          INTEGER REFERENCES contas(id),
     usuario_id        INTEGER NOT NULL REFERENCES usuarios(id),
     descricao         VARCHAR(200) NOT NULL,
     valor             NUMERIC(12,2) NOT NULL,
@@ -52,10 +70,12 @@ CREATE TABLE IF NOT EXISTS despesas_fixas (
     datestamp_insert  TIMESTAMP DEFAULT NOW(),
     datestamp_update  TIMESTAMP
 );
+ALTER TABLE despesas_fixas ADD COLUMN IF NOT EXISTS conta_id INTEGER REFERENCES contas(id);
 
 -- Lançamentos reais (compras avulsas, parcelas de cartão e instâncias geradas das despesas fixas)
 CREATE TABLE IF NOT EXISTS despesas (
     id                  SERIAL PRIMARY KEY,
+    conta_id            INTEGER REFERENCES contas(id),
     usuario_id          INTEGER NOT NULL REFERENCES usuarios(id),
     descricao           VARCHAR(200) NOT NULL,
     valor               NUMERIC(12,2) NOT NULL,
@@ -72,7 +92,10 @@ CREATE TABLE IF NOT EXISTS despesas (
     datestamp_insert    TIMESTAMP DEFAULT NOW(),
     datestamp_update    TIMESTAMP
 );
+ALTER TABLE despesas ADD COLUMN IF NOT EXISTS conta_id INTEGER REFERENCES contas(id);
 
-CREATE INDEX IF NOT EXISTS idx_despesas_usuario_mes ON despesas (usuario_id, mes_fatura) WHERE D_E_L_E_T = 0;
+CREATE INDEX IF NOT EXISTS idx_despesas_conta_mes ON despesas (conta_id, mes_fatura) WHERE D_E_L_E_T = 0;
 CREATE INDEX IF NOT EXISTS idx_despesas_cartao_mes ON despesas (cartao_id, mes_fatura) WHERE D_E_L_E_T = 0;
-CREATE INDEX IF NOT EXISTS idx_fixas_usuario ON despesas_fixas (usuario_id) WHERE D_E_L_E_T = 0;
+CREATE INDEX IF NOT EXISTS idx_fixas_conta ON despesas_fixas (conta_id) WHERE D_E_L_E_T = 0;
+CREATE INDEX IF NOT EXISTS idx_cartoes_conta ON cartoes (conta_id) WHERE D_E_L_E_T = 0;
+CREATE INDEX IF NOT EXISTS idx_categorias_conta ON categorias (conta_id) WHERE D_E_L_E_T = 0;

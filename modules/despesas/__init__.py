@@ -17,7 +17,7 @@ bp = Blueprint("despesas", __name__)
 @login_required
 def index():
     mes = request.args.get("mes", mes_atual())
-    garantir_despesas_fixas_do_mes(current_user.id, mes)
+    garantir_despesas_fixas_do_mes(current_user.conta_id, mes)
 
     lancamentos = db.query(
         """SELECT d.*, c.nome AS categoria_nome, c.cor AS categoria_cor,
@@ -25,17 +25,17 @@ def index():
            FROM despesas d
            LEFT JOIN categorias c ON c.id=d.categoria_id
            LEFT JOIN cartoes ct ON ct.id=d.cartao_id
-           WHERE d.usuario_id=%s AND d.mes_fatura=%s AND d.D_E_L_E_T=0
+           WHERE d.conta_id=%s AND d.mes_fatura=%s AND d.D_E_L_E_T=0
            ORDER BY d.data_compra DESC, d.id DESC""",
-        (current_user.id, mes),
+        (current_user.conta_id, mes),
     )
     categorias = db.query(
-        "SELECT * FROM categorias WHERE usuario_id=%s AND D_E_L_E_T=0 ORDER BY nome",
-        (current_user.id,),
+        "SELECT * FROM categorias WHERE conta_id=%s AND D_E_L_E_T=0 ORDER BY nome",
+        (current_user.conta_id,),
     )
     cartoes = db.query(
-        "SELECT * FROM cartoes WHERE usuario_id=%s AND D_E_L_E_T=0 ORDER BY nome",
-        (current_user.id,),
+        "SELECT * FROM cartoes WHERE conta_id=%s AND D_E_L_E_T=0 ORDER BY nome",
+        (current_user.conta_id,),
     )
     total = sum(float(item["valor"]) for item in lancamentos)
 
@@ -58,6 +58,7 @@ def salvar():
     d = request.form
     try:
         criar_despesa_avulsa(
+            conta_id=current_user.conta_id,
             usuario_id=current_user.id,
             descricao=d.get("descricao", "").strip(),
             valor=float(d.get("valor", "0").replace(",", ".")),
@@ -81,19 +82,20 @@ def salvar():
 @login_required
 def excluir(despesa_id):
     despesa = db.query_one(
-        "SELECT * FROM despesas WHERE id=%s AND usuario_id=%s", (despesa_id, current_user.id)
+        "SELECT * FROM despesas WHERE id=%s AND conta_id=%s",
+        (despesa_id, current_user.conta_id),
     )
     if despesa and despesa["grupo_parcelamento"]:
         db.execute(
             """UPDATE despesas SET D_E_L_E_T=1
-               WHERE grupo_parcelamento=%s AND usuario_id=%s""",
-            (despesa["grupo_parcelamento"], current_user.id),
+               WHERE grupo_parcelamento=%s AND conta_id=%s""",
+            (despesa["grupo_parcelamento"], current_user.conta_id),
         )
         flash("Compra parcelada removida (todas as parcelas).", "success")
     else:
         db.execute(
-            "UPDATE despesas SET D_E_L_E_T=1 WHERE id=%s AND usuario_id=%s",
-            (despesa_id, current_user.id),
+            "UPDATE despesas SET D_E_L_E_T=1 WHERE id=%s AND conta_id=%s",
+            (despesa_id, current_user.conta_id),
         )
         flash("Despesa removida.", "success")
 

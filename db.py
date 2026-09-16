@@ -26,7 +26,7 @@ def _config_da_conexao():
         return {
             "host": p.hostname,
             "port": p.port or 5432,
-            "database": (p.path or "/postgres").lstrip("/") or "postgres",
+            "database": (p.path or "/postgres").strip("/") or "postgres",
             "user": unquote(p.username or ""),
             "password": unquote(p.password or ""),
         }

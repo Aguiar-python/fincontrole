@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block titulo %}Conta criada — FinControle{% endblock %}
+
+{% block conteudo_auth %}
+<div class="auth-wrap">
+  <div class="auth-card" style="text-align:center;">
+    <div class="auth-brand" style="justify-content:center;"><i data-lucide="party-popper"></i> Conta criada!</div>
+    <p class="auth-sub">
+      Guarde este código. É com ele que outra pessoa (seu marido, esposa, etc.)
+      entra na <strong>mesma conta</strong> que você e vê os mesmos cartões e despesas.
+    </p>
+    <div style="background:var(--primary-soft);border-radius:14px;padding:20px;margin-bottom:20px;">
+      <div style="font-size:.75rem;color:var(--primary-dark);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">
+        Código de convite
+      </div>
+      <div style="font-size:2rem;font-weight:800;letter-spacing:.15em;color:var(--primary-dark);">
+        {{ codigo }}
+      </div>
+    </div>
+    <p style="font-size:.85rem;color:var(--ink-soft);margin-bottom:20px;">
+      Ela deve clicar em "Criar conta" &rarr; "Tenho um convite" e colar esse código.
+      Se perder, você pode ver esse código de novo depois, dentro do sistema.
+    </p>
+    <a href="{{ url_for('auth.login') }}" class="btn btn-primary" style="width:100%;justify-content:center;">
+      Ir para o login
+    </a>
+  </div>
+</div>
+{% endblock %}

@@ -11,33 +11,33 @@ bp = Blueprint("dashboard", __name__)
 @login_required
 def index():
     mes = request.args.get("mes", mes_atual())
-    garantir_despesas_fixas_do_mes(current_user.id, mes)
+    garantir_despesas_fixas_do_mes(current_user.conta_id, mes)
 
     total_mes = db.query_one(
         """SELECT COALESCE(SUM(valor),0) AS total FROM despesas
-           WHERE usuario_id=%s AND mes_fatura=%s AND D_E_L_E_T=0""",
-        (current_user.id, mes),
+           WHERE conta_id=%s AND mes_fatura=%s AND D_E_L_E_T=0""",
+        (current_user.conta_id, mes),
     )["total"]
 
     por_categoria = db.query(
         """SELECT c.nome, c.cor, COALESCE(SUM(d.valor),0) AS total
            FROM categorias c
            LEFT JOIN despesas d ON d.categoria_id=c.id AND d.mes_fatura=%s
-                                    AND d.D_E_L_E_T=0 AND d.usuario_id=%s
-           WHERE c.usuario_id=%s AND c.D_E_L_E_T=0
+                                    AND d.D_E_L_E_T=0 AND d.conta_id=%s
+           WHERE c.conta_id=%s AND c.D_E_L_E_T=0
            GROUP BY c.id, c.nome, c.cor
            HAVING COALESCE(SUM(d.valor),0) > 0
            ORDER BY total DESC""",
-        (mes, current_user.id, current_user.id),
+        (mes, current_user.conta_id, current_user.conta_id),
     )
 
     por_forma = db.query(
         """SELECT forma_pagamento, COALESCE(SUM(valor),0) AS total
            FROM despesas
-           WHERE usuario_id=%s AND mes_fatura=%s AND D_E_L_E_T=0
+           WHERE conta_id=%s AND mes_fatura=%s AND D_E_L_E_T=0
            GROUP BY forma_pagamento
            ORDER BY total DESC""",
-        (current_user.id, mes),
+        (current_user.conta_id, mes),
     )
 
     faturas_cartoes = db.query(
@@ -46,10 +46,10 @@ def index():
            FROM cartoes ct
            LEFT JOIN despesas d ON d.cartao_id=ct.id AND d.mes_fatura=%s
                                     AND d.D_E_L_E_T=0
-           WHERE ct.usuario_id=%s AND ct.D_E_L_E_T=0
+           WHERE ct.conta_id=%s AND ct.D_E_L_E_T=0
            GROUP BY ct.id, ct.nome, ct.cor, ct.limite, ct.dia_vencimento
            ORDER BY ct.nome""",
-        (mes, current_user.id),
+        (mes, current_user.conta_id),
     )
 
     ultimos_lancamentos = db.query(
@@ -58,10 +58,10 @@ def index():
            FROM despesas d
            LEFT JOIN categorias c ON c.id=d.categoria_id
            LEFT JOIN cartoes ct ON ct.id=d.cartao_id
-           WHERE d.usuario_id=%s AND d.mes_fatura=%s AND d.D_E_L_E_T=0
+           WHERE d.conta_id=%s AND d.mes_fatura=%s AND d.D_E_L_E_T=0
            ORDER BY d.data_compra DESC, d.id DESC
            LIMIT 8""",
-        (current_user.id, mes),
+        (current_user.conta_id, mes),
     )
 
     return render_template(

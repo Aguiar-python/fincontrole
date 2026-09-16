@@ -3,7 +3,12 @@ from flask_bcrypt import Bcrypt
 from flask_login import current_user, login_required, login_user, logout_user
 
 import db
-from auth import Usuario, criar_categorias_padrao
+from auth import (
+    Usuario,
+    buscar_conta_por_codigo,
+    criar_categorias_padrao,
+    criar_conta,
+)
 
 bp = Blueprint("auth", __name__)
 bcrypt = Bcrypt()
@@ -40,6 +45,12 @@ def registro():
         email = request.form.get("email", "").strip().lower()
         senha = request.form.get("senha", "")
         confirmar = request.form.get("confirmar_senha", "")
+        modo = request.form.get("modo", "criar")  # "criar" ou "entrar"
+        codigo_convite = request.form.get("codigo_convite", "").strip().upper()
+
+        conta = None
+        if modo == "entrar":
+            conta = buscar_conta_por_codigo(codigo_convite)
 
         if not nome or not email or not senha:
             flash("Preencha todos os campos.", "danger")
@@ -49,18 +60,41 @@ def registro():
             flash("A senha precisa ter pelo menos 6 caracteres.", "danger")
         elif Usuario.buscar_por_email(email):
             flash("Já existe uma conta com este e-mail.", "danger")
+        elif modo == "entrar" and not conta:
+            flash("Código de convite inválido. Confira com quem te enviou.", "danger")
         else:
+            criar_categorias = False
+            if modo == "entrar":
+                conta_id = conta["id"]
+            else:
+                conta_id, codigo_gerado = criar_conta(f"Conta de {nome}")
+                criar_categorias = True
+
             senha_hash = bcrypt.generate_password_hash(senha).decode("utf-8")
             novo = db.execute(
-                """INSERT INTO usuarios (nome, email, senha_hash)
-                   VALUES (%s,%s,%s) RETURNING id""",
-                (nome, email, senha_hash),
+                """INSERT INTO usuarios (conta_id, nome, email, senha_hash)
+                   VALUES (%s,%s,%s,%s) RETURNING id""",
+                (conta_id, nome, email, senha_hash),
             )
-            criar_categorias_padrao(novo["id"])
-            flash("Conta criada com sucesso! Faça login para continuar.", "success")
-            return redirect(url_for("auth.login"))
+            if criar_categorias:
+                criar_categorias_padrao(conta_id, novo["id"])
+
+            if modo == "entrar":
+                flash(
+                    f"Conta criada! Você entrou na mesma conta de {conta['nome']}. "
+                    "Faça login para continuar.",
+                    "success",
+                )
+                return redirect(url_for("auth.login"))
+            else:
+                return redirect(url_for("auth.conta_criada", codigo=codigo_gerado))
 
     return render_template("auth/registro.html")
+
+
+@bp.route("/conta-criada/<codigo>")
+def conta_criada(codigo):
+    return render_template("auth/conta_criada.html", codigo=codigo)
 
 
 @bp.route("/logout")

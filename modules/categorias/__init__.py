@@ -13,10 +13,10 @@ def index():
         """SELECT c.*, COALESCE(SUM(d.valor),0) AS total_gasto
            FROM categorias c
            LEFT JOIN despesas d ON d.categoria_id=c.id AND d.D_E_L_E_T=0
-           WHERE c.usuario_id=%s AND c.D_E_L_E_T=0
+           WHERE c.conta_id=%s AND c.D_E_L_E_T=0
            GROUP BY c.id
            ORDER BY c.nome""",
-        (current_user.id,),
+        (current_user.conta_id,),
     )
     return render_template("categorias/index.html", categorias=categorias)
 
@@ -36,14 +36,14 @@ def salvar():
     if cat_id:
         db.execute(
             """UPDATE categorias SET nome=%s, cor=%s
-               WHERE id=%s AND usuario_id=%s""",
-            (nome, cor, cat_id, current_user.id),
+               WHERE id=%s AND conta_id=%s""",
+            (nome, cor, cat_id, current_user.conta_id),
         )
         flash("Categoria atualizada.", "success")
     else:
         db.execute(
-            "INSERT INTO categorias (usuario_id, nome, cor) VALUES (%s,%s,%s)",
-            (current_user.id, nome, cor),
+            "INSERT INTO categorias (conta_id, usuario_id, nome, cor) VALUES (%s,%s,%s,%s)",
+            (current_user.conta_id, current_user.id, nome, cor),
         )
         flash("Categoria criada.", "success")
     return redirect(url_for("categorias.index"))
@@ -53,8 +53,8 @@ def salvar():
 @login_required
 def excluir(cat_id):
     db.execute(
-        "UPDATE categorias SET D_E_L_E_T=1 WHERE id=%s AND usuario_id=%s",
-        (cat_id, current_user.id),
+        "UPDATE categorias SET D_E_L_E_T=1 WHERE id=%s AND conta_id=%s",
+        (cat_id, current_user.conta_id),
     )
     flash("Categoria removida.", "success")
     return redirect(url_for("categorias.index"))

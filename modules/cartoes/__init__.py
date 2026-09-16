@@ -15,10 +15,10 @@ def index():
         """SELECT ct.*, COALESCE(SUM(d.valor),0) AS fatura_atual
            FROM cartoes ct
            LEFT JOIN despesas d ON d.cartao_id=ct.id AND d.mes_fatura=%s AND d.D_E_L_E_T=0
-           WHERE ct.usuario_id=%s AND ct.D_E_L_E_T=0
+           WHERE ct.conta_id=%s AND ct.D_E_L_E_T=0
            GROUP BY ct.id
            ORDER BY ct.nome""",
-        (mes, current_user.id),
+        (mes, current_user.conta_id),
     )
     return render_template("cartoes/index.html", cartoes=cartoes)
 
@@ -43,18 +43,18 @@ def salvar():
         db.execute(
             """UPDATE cartoes SET nome=%s, bandeira=%s, limite=%s, dia_fechamento=%s,
                dia_vencimento=%s, cor=%s, datestamp_update=NOW()
-               WHERE id=%s AND usuario_id=%s""",
+               WHERE id=%s AND conta_id=%s""",
             (nome, bandeira, limite, dia_fechamento, dia_vencimento, cor,
-             cartao_id, current_user.id),
+             cartao_id, current_user.conta_id),
         )
         flash("Cartão atualizado.", "success")
     else:
         db.execute(
-            """INSERT INTO cartoes (usuario_id, nome, bandeira, limite,
+            """INSERT INTO cartoes (conta_id, usuario_id, nome, bandeira, limite,
                dia_fechamento, dia_vencimento, cor)
-               VALUES (%s,%s,%s,%s,%s,%s,%s)""",
-            (current_user.id, nome, bandeira, limite, dia_fechamento,
-             dia_vencimento, cor),
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s)""",
+            (current_user.conta_id, current_user.id, nome, bandeira, limite,
+             dia_fechamento, dia_vencimento, cor),
         )
         flash("Cartão cadastrado.", "success")
     return redirect(url_for("cartoes.index"))
@@ -64,8 +64,8 @@ def salvar():
 @login_required
 def excluir(cartao_id):
     db.execute(
-        "UPDATE cartoes SET D_E_L_E_T=1 WHERE id=%s AND usuario_id=%s",
-        (cartao_id, current_user.id),
+        "UPDATE cartoes SET D_E_L_E_T=1 WHERE id=%s AND conta_id=%s",
+        (cartao_id, current_user.conta_id),
     )
     flash("Cartão removido.", "success")
     return redirect(url_for("cartoes.index"))
@@ -76,8 +76,8 @@ def excluir(cartao_id):
 def fatura(cartao_id):
     mes = request.args.get("mes", mes_atual())
     cartao = db.query_one(
-        "SELECT * FROM cartoes WHERE id=%s AND usuario_id=%s AND D_E_L_E_T=0",
-        (cartao_id, current_user.id),
+        "SELECT * FROM cartoes WHERE id=%s AND conta_id=%s AND D_E_L_E_T=0",
+        (cartao_id, current_user.conta_id),
     )
     if not cartao:
         flash("Cartão não encontrado.", "danger")

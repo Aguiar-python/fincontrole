@@ -27,6 +27,8 @@ def load_user(user_id):
 with app.app_context():
     try:
         db.init_db()
+        from migracao import migrar_usuarios_sem_conta
+        migrar_usuarios_sem_conta()
     except Exception as e:
         print(f"[DB] Erro ao inicializar o banco: {e}")
 
@@ -38,6 +40,7 @@ from modules.cartoes import bp as bp_cartoes
 from modules.despesas import bp as bp_despesas
 from modules.categorias import bp as bp_categorias
 from modules.fixas import bp as bp_fixas
+from modules.conta import bp as bp_conta
 
 init_bcrypt(app)
 app.register_blueprint(bp_auth, url_prefix="/auth")
@@ -46,6 +49,7 @@ app.register_blueprint(bp_cartoes, url_prefix="/cartoes")
 app.register_blueprint(bp_despesas, url_prefix="/despesas")
 app.register_blueprint(bp_categorias, url_prefix="/categorias")
 app.register_blueprint(bp_fixas, url_prefix="/fixas")
+app.register_blueprint(bp_conta, url_prefix="/conta")
 
 
 @app.context_processor

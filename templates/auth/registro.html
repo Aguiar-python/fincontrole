@@ -6,7 +6,14 @@
   <div class="auth-card">
     <div class="auth-brand"><i data-lucide="wallet"></i> FinControle</div>
     <p class="auth-sub">Crie sua conta para começar a organizar suas finanças.</p>
+
+    <div style="display:flex;gap:8px;margin-bottom:18px;background:var(--bg);padding:4px;border-radius:10px;">
+      <button type="button" id="btnModoCriar" class="btn btn-primary btn-sm" style="flex:1;justify-content:center;" onclick="escolherModo('criar')">Conta nova</button>
+      <button type="button" id="btnModoEntrar" class="btn btn-ghost btn-sm" style="flex:1;justify-content:center;" onclick="escolherModo('entrar')">Tenho um convite</button>
+    </div>
+
     <form method="post">
+      <input type="hidden" name="modo" id="modo" value="criar">
       <div class="field">
         <label for="nome">Nome</label>
         <input type="text" id="nome" name="nome" required autofocus>
@@ -23,9 +30,30 @@
         <label for="confirmar_senha">Confirmar senha</label>
         <input type="password" id="confirmar_senha" name="confirmar_senha" minlength="6" required>
       </div>
+      <div class="field" id="wrapCodigoConvite" style="display:none;">
+        <label for="codigo_convite">Código de convite</label>
+        <input type="text" id="codigo_convite" name="codigo_convite" placeholder="Ex.: 7X9K2M" style="text-transform:uppercase;">
+      </div>
       <button type="submit" class="btn btn-primary">Criar conta</button>
     </form>
     <p class="auth-switch">Já tem conta? <a href="{{ url_for('auth.login') }}">Entrar</a></p>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function escolherModo(modo) {
+  document.getElementById('modo').value = modo;
+  document.getElementById('wrapCodigoConvite').style.display = modo === 'entrar' ? '' : 'none';
+  document.getElementById('codigo_convite').required = modo === 'entrar';
+
+  const criar = document.getElementById('btnModoCriar');
+  const entrar = document.getElementById('btnModoEntrar');
+  criar.className = modo === 'criar' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm';
+  entrar.className = modo === 'entrar' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm';
+  criar.style.cssText = 'flex:1;justify-content:center;';
+  entrar.style.cssText = 'flex:1;justify-content:center;';
+}
+</script>
 {% endblock %}

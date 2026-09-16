@@ -49,11 +49,14 @@ def calcular_mes_fatura_inicial(data_compra: date, dia_fechamento: int) -> str:
     return base
 
 
-def criar_despesa_avulsa(usuario_id, descricao, valor, data_compra, categoria_id,
-                          forma_pagamento, cartao_id=None, total_parcelas=1):
+def criar_despesa_avulsa(conta_id, usuario_id, descricao, valor, data_compra,
+                          categoria_id, forma_pagamento, cartao_id=None,
+                          total_parcelas=1):
     """
-    Cria uma despesa. Se for no cartão e parcelada, gera uma linha por parcela,
-    cada uma com o mes_fatura correto (indo empurrando fatura a fatura).
+    Cria uma despesa visível para toda a conta (todos os usuários dela).
+    usuario_id registra apenas quem lançou, pra auditoria.
+    Se for no cartão e parcelada, gera uma linha por parcela, cada uma com
+    o mes_fatura correto (indo empurrando fatura a fatura).
     """
     if isinstance(data_compra, str):
         data_compra = datetime.strptime(data_compra, "%Y-%m-%d").date()
@@ -62,8 +65,8 @@ def criar_despesa_avulsa(usuario_id, descricao, valor, data_compra, categoria_id
 
     if forma_pagamento == "cartao" and cartao_id:
         cartao = db.query_one(
-            "SELECT * FROM cartoes WHERE id=%s AND usuario_id=%s AND D_E_L_E_T=0",
-            (cartao_id, usuario_id),
+            "SELECT * FROM cartoes WHERE id=%s AND conta_id=%s AND D_E_L_E_T=0",
+            (cartao_id, conta_id),
         )
         if not cartao:
             raise ValueError("Cartão não encontrado.")
@@ -80,34 +83,34 @@ def criar_despesa_avulsa(usuario_id, descricao, valor, data_compra, categoria_id
             mes_fatura = mes_add(mes_base, i - 1)
             db.execute(
                 """INSERT INTO despesas
-                   (usuario_id, descricao, valor, data_compra, categoria_id,
+                   (conta_id, usuario_id, descricao, valor, data_compra, categoria_id,
                     forma_pagamento, cartao_id, parcela_atual, total_parcelas,
                     grupo_parcelamento, mes_fatura)
-                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
-                (usuario_id, descricao, valor_atual, data_compra, categoria_id,
+                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                (conta_id, usuario_id, descricao, valor_atual, data_compra, categoria_id,
                  forma_pagamento, cartao_id, i, total_parcelas, grupo, mes_fatura),
             )
     else:
         mes_fatura = mes_str(data_compra)
         db.execute(
             """INSERT INTO despesas
-               (usuario_id, descricao, valor, data_compra, categoria_id,
+               (conta_id, usuario_id, descricao, valor, data_compra, categoria_id,
                 forma_pagamento, cartao_id, parcela_atual, total_parcelas, mes_fatura)
-               VALUES (%s,%s,%s,%s,%s,%s,%s,1,1,%s)""",
-            (usuario_id, descricao, valor, data_compra, categoria_id,
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,1,1,%s)""",
+            (conta_id, usuario_id, descricao, valor, data_compra, categoria_id,
              forma_pagamento, cartao_id, mes_fatura),
         )
 
 
-def garantir_despesas_fixas_do_mes(usuario_id, mes):
+def garantir_despesas_fixas_do_mes(conta_id, mes):
     """
-    Para cada despesa fixa ativa do usuário, garante que exista uma instância
-    lançada em `despesas` para o mês informado. Chamado sempre que o usuário
+    Para cada despesa fixa ativa da conta, garante que exista uma instância
+    lançada em `despesas` para o mês informado. Chamado sempre que alguém
     visualiza o dashboard ou a lista de despesas de um mês.
     """
     fixas = db.query(
-        "SELECT * FROM despesas_fixas WHERE usuario_id=%s AND ativa=1 AND D_E_L_E_T=0",
-        (usuario_id,),
+        "SELECT * FROM despesas_fixas WHERE conta_id=%s AND ativa=1 AND D_E_L_E_T=0",
+        (conta_id,),
     )
     ano, mm = map(int, mes.split("-"))
     for fixa in fixas:
@@ -122,13 +125,11 @@ def garantir_despesas_fixas_do_mes(usuario_id, mes):
         data_lancamento = date(ano, mm, dia)
         db.execute(
             """INSERT INTO despesas
-               (usuario_id, descricao, valor, data_compra, categoria_id,
+               (conta_id, usuario_id, descricao, valor, data_compra, categoria_id,
                 forma_pagamento, cartao_id, parcela_atual, total_parcelas,
                 mes_fatura, origem_fixa_id)
-               VALUES (%s,%s,%s,%s,%s,%s,%s,1,1,%s,%s)""",
-            (usuario_id, fixa["descricao"], fixa["valor"], data_lancamento,
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,1,1,%s,%s)""",
+            (conta_id, fixa["usuario_id"], fixa["descricao"], fixa["valor"], data_lancamento,
              fixa["categoria_id"], fixa["forma_pagamento"], fixa["cartao_id"],
              mes, fixa["id"]),
         )
-
-#"Corrige data das despesas"
