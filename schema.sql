@@ -3,7 +3,7 @@
 -- =========================================================
 
 -- Uma "conta" é o espaço compartilhado (ex.: um casal usando o mesmo painel).
--- Cada usuário pertence a uma conta; todos os dados (cartões, despesas etc.)
+-- Cada usuário pertence a uma conta, e todos os dados (cartões, despesas etc.)
 -- são visíveis para todos os usuários da mesma conta.
 CREATE TABLE IF NOT EXISTS contas (
     id                SERIAL PRIMARY KEY,
