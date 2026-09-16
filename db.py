@@ -132,10 +132,65 @@ def _executar_arquivo_sql(conn, caminho):
     with open(caminho, encoding="utf-8") as f:
         conteudo = f.read()
     cur = conn.cursor()
-    for comando in conteudo.split(";"):
-        comando = comando.strip()
-        if comando:
-            cur.execute(comando)
+    for comando in _dividir_comandos_sql(conteudo):
+        cur.execute(comando)
+
+
+def _dividir_comandos_sql(conteudo):
+    """
+    Divide um arquivo .sql em comandos individuais, separando por ';'.
+    Ignora ';' que apareça dentro de comentários (--) ou de strings
+    entre aspas simples, para não quebrar um comando no meio por engano.
+    """
+    comandos = []
+    buffer = []
+    em_comentario = False
+    em_string = False
+    i = 0
+    n = len(conteudo)
+
+    while i < n:
+        ch = conteudo[i]
+
+        if em_comentario:
+            buffer.append(ch)
+            if ch == "\n":
+                em_comentario = False
+            i += 1
+            continue
+
+        if em_string:
+            buffer.append(ch)
+            if ch == "'":
+                em_string = False
+            i += 1
+            continue
+
+        if conteudo[i:i + 2] == "--":
+            em_comentario = True
+            buffer.append("--")
+            i += 2
+            continue
+
+        if ch == "'":
+            em_string = True
+            buffer.append(ch)
+            i += 1
+            continue
+
+        if ch == ";":
+            comandos.append("".join(buffer))
+            buffer = []
+            i += 1
+            continue
+
+        buffer.append(ch)
+        i += 1
+
+    if "".join(buffer).strip():
+        comandos.append("".join(buffer))
+
+    return [c.strip() for c in comandos if c.strip()]
 
 
 def init_db():
