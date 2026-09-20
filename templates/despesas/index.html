@@ -14,8 +14,54 @@
   </button>
 </div>
 
+<div class="card" style="margin-bottom:18px;">
+  <h3 class="card-title" style="margin-bottom:14px;">
+    <span style="display:flex;align-items:center;gap:8px;"><i data-lucide="filter" style="width:16px;height:16px;"></i> Filtros</span>
+  </h3>
+  <form method="get" action="{{ url_for('despesas.index') }}" class="form-grid cols-3">
+    <div class="field">
+      <label for="f_categoria">Categoria</label>
+      <select id="f_categoria" name="categoria_id">
+        <option value="">Todas</option>
+        {% for c in categorias %}
+        <option value="{{ c.id }}" {{ 'selected' if categoria_id|string == c.id|string }}>{{ c.nome }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="f_forma">Forma de pagamento</label>
+      <select id="f_forma" name="forma_pagamento">
+        <option value="">Todas</option>
+        {% for chave, rotulo in formas_pagamento.items() %}
+        <option value="{{ chave }}" {{ 'selected' if forma_pagamento == chave }}>{{ rotulo }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div></div>
+    <div class="field">
+      <label for="f_inicio">De</label>
+      <input type="date" id="f_inicio" name="data_inicio" value="{{ data_inicio }}">
+    </div>
+    <div class="field">
+      <label for="f_fim">Até</label>
+      <input type="date" id="f_fim" name="data_fim" value="{{ data_fim }}">
+    </div>
+    <div style="display:flex;align-items:end;gap:8px;">
+      <button type="submit" class="btn btn-primary" style="flex:1;justify-content:center;">Filtrar</button>
+      {% if categoria_id or forma_pagamento or usa_periodo_customizado %}
+      <a href="{{ url_for('despesas.index', mes=mes) }}" class="btn btn-ghost btn-icon" title="Limpar filtros"><i data-lucide="x" style="width:15px;height:15px;"></i></a>
+      {% endif %}
+    </div>
+  </form>
+  {% if usa_periodo_customizado %}
+  <p style="font-size:.78rem;color:var(--ink-soft);margin:10px 0 0;">
+    Mostrando período customizado ({{ data_inicio }} a {{ data_fim }}) — a navegação por mês fica desativada enquanto o período estiver preenchido.
+  </p>
+  {% endif %}
+</div>
+
 <div class="card stat-card" style="margin-bottom:18px;">
-  <span class="stat-label">Total do mês</span>
+  <span class="stat-label">Total {{ 'do período' if usa_periodo_customizado else 'do mês' }}</span>
   <span class="stat-value">R$ {{ '%.2f'|format(total) | replace('.', ',') }}</span>
   <span class="stat-sub">{{ lancamentos|length }} lançamento(s)</span>
 </div>

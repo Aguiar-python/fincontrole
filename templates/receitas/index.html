@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block titulo %}Receitas — FinControle{% endblock %}
+{% block cabecalho %}Receitas{% endblock %}
+
+{% block conteudo %}
+<div class="page-actions">
+  <div class="month-nav" style="margin:0;">
+    <a href="{{ url_for('receitas.index', mes=mes_anterior) }}"><i data-lucide="chevron-left"></i></a>
+    <span class="month-label">{{ mes_label }}</span>
+    <a href="{{ url_for('receitas.index', mes=mes_seguinte) }}"><i data-lucide="chevron-right"></i></a>
+  </div>
+  <button class="btn btn-primary" onclick="abrirModal('modalReceita')">
+    <i data-lucide="plus"></i> Nova receita
+  </button>
+</div>
+
+<div class="grid grid-3" style="margin-bottom:18px;">
+  <div class="card stat-card">
+    <span class="stat-label">Total bruto</span>
+    <span class="stat-value">R$ {{ '%.2f'|format(total_bruto) | replace('.', ',') }}</span>
+  </div>
+  <div class="card stat-card">
+    <span class="stat-label">Descontos</span>
+    <span class="stat-value" style="color:var(--danger);">R$ {{ '%.2f'|format(total_descontos) | replace('.', ',') }}</span>
+  </div>
+  <div class="card stat-card">
+    <span class="stat-label">Total líquido (o que entrou)</span>
+    <span class="stat-value" style="color:var(--success);">R$ {{ '%.2f'|format(total_liquido) | replace('.', ',') }}</span>
+  </div>
+</div>
+
+<div class="card">
+  <h3 class="card-title">Lançamentos</h3>
+  {% if receitas %}
+    <div class="list">
+      {% for r in receitas %}
+      <div class="list-item">
+        <div class="li-left">
+          <span class="li-dot" style="background: {{ '#16a34a' if r.tipo == 'salario' else '#0ea5e9' }};"></span>
+          <div class="li-text">
+            <strong>{{ r.descricao }}</strong>
+            <span>
+              {{ r.data_recebimento.strftime('%d/%m/%Y') }} ·
+              {{ r.usuario_nome }} ·
+              {{ 'Salário' if r.tipo == 'salario' else 'Outra receita' }}
+              {% if r.tipo == 'salario' %} · bruto R$ {{ '%.2f'|format(r.salario_bruto|float) | replace('.', ',') }}{% endif %}
+            </span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="li-value" style="color:var(--success);">R$ {{ '%.2f'|format(r.valor_liquido|float) | replace('.', ',') }}</span>
+          <a href="{{ url_for('receitas.excluir', receita_id=r.id, mes=mes) }}"
+             class="btn btn-danger-ghost btn-icon"
+             onclick="return confirm('Remover esta receita?')">
+            <i data-lucide="trash-2" style="width:15px;height:15px;"></i>
+          </a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <i data-lucide="trending-up"></i>
+      <p>Nenhuma receita neste mês.</p>
+      <button class="btn btn-primary btn-sm" onclick="abrirModal('modalReceita')">Lançar a primeira</button>
+    </div>
+  {% endif %}
+</div>
+
+<!-- Modal Nova Receita -->
+<div class="modal-backdrop" id="modalReceita">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Nova receita</h3>
+      <button class="modal-close" onclick="fecharModal('modalReceita')"><i data-lucide="x"></i></button>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-bottom:18px;background:var(--bg);padding:4px;border-radius:10px;">
+      <button type="button" id="btnTipoSalario" class="btn btn-primary btn-sm" style="flex:1;justify-content:center;" onclick="escolherTipoReceita('salario')">Salário (contracheque)</button>
+      <button type="button" id="btnTipoOutra" class="btn btn-ghost btn-sm" style="flex:1;justify-content:center;" onclick="escolherTipoReceita('outra')">Outra receita</button>
+    </div>
+
+    <form method="post" action="{{ url_for('receitas.salvar') }}">
+      <input type="hidden" name="tipo" id="tipo_receita" value="salario">
+      <div class="form-grid">
+        <div class="field full">
+          <label for="descricao">Descrição</label>
+          <input type="text" id="descricao" name="descricao" required placeholder="Ex.: Salário setembro">
+        </div>
+        <div class="field">
+          <label for="data_recebimento">Data de recebimento</label>
+          <input type="date" id="data_recebimento" name="data_recebimento" value="{{ mes }}-05" required>
+        </div>
+
+        <div class="field" id="campoValorSimples" style="display:none;">
+          <label for="valor_liquido">Valor recebido (R$)</label>
+          <input type="number" step="0.01" min="0" id="valor_liquido" name="valor_liquido" placeholder="0,00">
+        </div>
+
+        <div class="field" id="campoBruto">
+          <label for="salario_bruto">Salário bruto (R$)</label>
+          <input type="number" step="0.01" min="0" id="salario_bruto" name="salario_bruto" placeholder="0,00">
+        </div>
+      </div>
+
+      <div id="camposDesconto">
+        <p style="font-size:.8rem;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;margin:18px 0 10px;">Descontos</p>
+        <div class="form-grid cols-3">
+          <div class="field">
+            <label for="inss">INSS (R$)</label>
+            <input type="number" step="0.01" min="0" id="inss" name="inss" placeholder="0,00">
+          </div>
+          <div class="field">
+            <label for="irrf">IRRF (R$)</label>
+            <input type="number" step="0.01" min="0" id="irrf" name="irrf" placeholder="0,00">
+          </div>
+          <div class="field">
+            <label for="plano_saude">Plano de saúde (R$)</label>
+            <input type="number" step="0.01" min="0" id="plano_saude" name="plano_saude" placeholder="0,00">
+          </div>
+          <div class="field">
+            <label for="plano_odontologico">Plano odontológico (R$)</label>
+            <input type="number" step="0.01" min="0" id="plano_odontologico" name="plano_odontologico" placeholder="0,00">
+          </div>
+          <div class="field">
+            <label for="vale_alimentacao">Desc. vale-alimentação (R$)</label>
+            <input type="number" step="0.01" min="0" id="vale_alimentacao" name="vale_alimentacao" placeholder="0,00">
+          </div>
+          <div class="field">
+            <label for="outros_descontos">Faltas / outros (R$)</label>
+            <input type="number" step="0.01" min="0" id="outros_descontos" name="outros_descontos" placeholder="0,00">
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="fecharModal('modalReceita')">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Salvar receita</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function escolherTipoReceita(tipo) {
+  document.getElementById('tipo_receita').value = tipo;
+  const ehSalario = tipo === 'salario';
+
+  document.getElementById('campoBruto').style.display = ehSalario ? '' : 'none';
+  document.getElementById('camposDesconto').style.display = ehSalario ? '' : 'none';
+  document.getElementById('campoValorSimples').style.display = ehSalario ? 'none' : '';
+
+  const btnSalario = document.getElementById('btnTipoSalario');
+  const btnOutra = document.getElementById('btnTipoOutra');
+  btnSalario.className = ehSalario ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm';
+  btnOutra.className = ehSalario ? 'btn btn-ghost btn-sm' : 'btn btn-primary btn-sm';
+  btnSalario.style.cssText = 'flex:1;justify-content:center;';
+  btnOutra.style.cssText = 'flex:1;justify-content:center;';
+}
+</script>
+{% endblock %}

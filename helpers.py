@@ -71,6 +71,7 @@ def criar_despesa_avulsa(conta_id, usuario_id, descricao, valor, data_compra,
         if not cartao:
             raise ValueError("Cartão não encontrado.")
         mes_base = calcular_mes_fatura_inicial(data_compra, cartao["dia_fechamento"])
+        mes_competencia = mes_str(data_compra)
         valor_parcela = round(float(valor) / total_parcelas, 2)
         grupo = str(uuid.uuid4())[:8] if total_parcelas > 1 else None
 
@@ -85,20 +86,22 @@ def criar_despesa_avulsa(conta_id, usuario_id, descricao, valor, data_compra,
                 """INSERT INTO despesas
                    (conta_id, usuario_id, descricao, valor, data_compra, categoria_id,
                     forma_pagamento, cartao_id, parcela_atual, total_parcelas,
-                    grupo_parcelamento, mes_fatura)
-                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                    grupo_parcelamento, mes_fatura, mes_competencia)
+                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
                 (conta_id, usuario_id, descricao, valor_atual, data_compra, categoria_id,
-                 forma_pagamento, cartao_id, i, total_parcelas, grupo, mes_fatura),
+                 forma_pagamento, cartao_id, i, total_parcelas, grupo, mes_fatura,
+                 mes_competencia),
             )
     else:
         mes_fatura = mes_str(data_compra)
         db.execute(
             """INSERT INTO despesas
                (conta_id, usuario_id, descricao, valor, data_compra, categoria_id,
-                forma_pagamento, cartao_id, parcela_atual, total_parcelas, mes_fatura)
-               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,1,1,%s)""",
+                forma_pagamento, cartao_id, parcela_atual, total_parcelas, mes_fatura,
+                mes_competencia)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,1,1,%s,%s)""",
             (conta_id, usuario_id, descricao, valor, data_compra, categoria_id,
-             forma_pagamento, cartao_id, mes_fatura),
+             forma_pagamento, cartao_id, mes_fatura, mes_fatura),
         )
 
 
@@ -127,9 +130,9 @@ def garantir_despesas_fixas_do_mes(conta_id, mes):
             """INSERT INTO despesas
                (conta_id, usuario_id, descricao, valor, data_compra, categoria_id,
                 forma_pagamento, cartao_id, parcela_atual, total_parcelas,
-                mes_fatura, origem_fixa_id)
-               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,1,1,%s,%s)""",
+                mes_fatura, mes_competencia, origem_fixa_id)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,1,1,%s,%s,%s)""",
             (conta_id, fixa["usuario_id"], fixa["descricao"], fixa["valor"], data_lancamento,
              fixa["categoria_id"], fixa["forma_pagamento"], fixa["cartao_id"],
-             mes, fixa["id"]),
+             mes, mes, fixa["id"]),
         )

@@ -3,31 +3,50 @@
 {% block cabecalho %}Dashboard{% endblock %}
 
 {% block conteudo %}
-<div class="month-nav">
-  <a href="{{ url_for('dashboard.index', mes=mes_anterior) }}"><i data-lucide="chevron-left"></i></a>
-  <span class="month-label">{{ mes_label }}</span>
-  <a href="{{ url_for('dashboard.index', mes=mes_seguinte) }}"><i data-lucide="chevron-right"></i></a>
-  {% if mes != mes_atual_global %}
-    <a href="{{ url_for('dashboard.index') }}" class="btn btn-ghost btn-sm" style="width:auto;padding:6px 12px;">Hoje</a>
-  {% endif %}
+<div class="page-actions">
+  <div class="month-nav" style="margin:0;">
+    <a href="{{ url_for('dashboard.index', mes=mes_anterior, regime=regime) }}"><i data-lucide="chevron-left"></i></a>
+    <span class="month-label">{{ mes_label }}</span>
+    <a href="{{ url_for('dashboard.index', mes=mes_seguinte, regime=regime) }}"><i data-lucide="chevron-right"></i></a>
+    {% if mes != mes_atual_global %}
+      <a href="{{ url_for('dashboard.index', regime=regime) }}" class="btn btn-ghost btn-sm" style="width:auto;padding:6px 12px;">Hoje</a>
+    {% endif %}
+  </div>
+
+  <div style="display:flex;gap:4px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:4px;box-shadow:var(--shadow);">
+    <a href="{{ url_for('dashboard.index', mes=mes, regime='caixa') }}"
+       class="btn btn-sm {{ 'btn-primary' if regime == 'caixa' else 'btn-ghost' }}"
+       style="justify-content:center;">Regime de caixa</a>
+    <a href="{{ url_for('dashboard.index', mes=mes, regime='competencia') }}"
+       class="btn btn-sm {{ 'btn-primary' if regime == 'competencia' else 'btn-ghost' }}"
+       style="justify-content:center;">Regime de competência</a>
+  </div>
 </div>
+<p style="font-size:.8rem;color:var(--ink-soft);margin:-12px 0 18px;">
+  {% if regime == 'caixa' %}
+    Mostrando quanto efetivamente saiu do bolso neste mês (parcelas de cartão contam na fatura em que caem).
+  {% else %}
+    Mostrando quanto você se comprometeu a gastar neste mês (uma compra parcelada conta inteira no mês da compra).
+  {% endif %}
+</p>
 
 <div class="grid grid-3" style="margin-bottom:18px;">
   <div class="card stat-card">
-    <span class="stat-label">Total do mês</span>
-    <span class="stat-value">R$ {{ '%.2f'|format(total_mes|float) | replace('.', ',') }}</span>
-    <span class="stat-sub">{{ ultimos_lancamentos|length }} lançamentos recentes</span>
+    <span class="stat-label">Receitas do mês</span>
+    <span class="stat-value" style="color:var(--success);">R$ {{ '%.2f'|format(total_receitas|float) | replace('.', ',') }}</span>
+    <a href="{{ url_for('receitas.index', mes=mes) }}" class="stat-sub">Ver receitas</a>
   </div>
   <div class="card stat-card">
-    <span class="stat-label">Total em cartões</span>
-    {% set total_cartoes = faturas_cartoes | sum(attribute='total_fatura') %}
-    <span class="stat-value">R$ {{ '%.2f'|format(total_cartoes|float) | replace('.', ',') }}</span>
-    <span class="stat-sub">{{ faturas_cartoes|length }} cartão(ões) cadastrado(s)</span>
+    <span class="stat-label">Despesas do mês</span>
+    <span class="stat-value" style="color:var(--danger);">R$ {{ '%.2f'|format(total_despesas|float) | replace('.', ',') }}</span>
+    <a href="{{ url_for('despesas.index', mes=mes) }}" class="stat-sub">Ver despesas</a>
   </div>
   <div class="card stat-card">
-    <span class="stat-label">Outras formas</span>
-    <span class="stat-value">R$ {{ '%.2f'|format((total_mes|float) - (total_cartoes|float)) | replace('.', ',') }}</span>
-    <span class="stat-sub">Débito, Pix, dinheiro e boleto</span>
+    <span class="stat-label">Saldo do mês</span>
+    <span class="stat-value" style="color: {{ 'var(--success)' if saldo >= 0 else 'var(--danger)' }};">
+      R$ {{ '%.2f'|format(saldo) | replace('.', ',') }}
+    </span>
+    <span class="stat-sub">{{ 'Sobrou' if saldo >= 0 else 'Faltou' }} no mês</span>
   </div>
 </div>
 

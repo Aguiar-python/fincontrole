@@ -94,8 +94,42 @@ CREATE TABLE IF NOT EXISTS despesas (
 );
 ALTER TABLE despesas ADD COLUMN IF NOT EXISTS conta_id INTEGER REFERENCES contas(id);
 
+-- Regime de competência: mês em que a compra foi feita (data_compra), sempre
+-- o mesmo em todas as parcelas de uma mesma compra. Diferente do mes_fatura
+-- (regime de caixa), que varia parcela a parcela conforme a fatura do cartão.
+ALTER TABLE despesas ADD COLUMN IF NOT EXISTS mes_competencia VARCHAR(7);
+UPDATE despesas SET mes_competencia = to_char(data_compra, 'YYYY-MM')
+    WHERE mes_competencia IS NULL;
+
 CREATE INDEX IF NOT EXISTS idx_despesas_conta_mes ON despesas (conta_id, mes_fatura) WHERE D_E_L_E_T = 0;
+CREATE INDEX IF NOT EXISTS idx_despesas_competencia ON despesas (conta_id, mes_competencia) WHERE D_E_L_E_T = 0;
 CREATE INDEX IF NOT EXISTS idx_despesas_cartao_mes ON despesas (cartao_id, mes_fatura) WHERE D_E_L_E_T = 0;
 CREATE INDEX IF NOT EXISTS idx_fixas_conta ON despesas_fixas (conta_id) WHERE D_E_L_E_T = 0;
 CREATE INDEX IF NOT EXISTS idx_cartoes_conta ON cartoes (conta_id) WHERE D_E_L_E_T = 0;
 CREATE INDEX IF NOT EXISTS idx_categorias_conta ON categorias (conta_id) WHERE D_E_L_E_T = 0;
+
+-- Receitas: salário (com detalhamento do contracheque) ou outras entradas
+-- (freelance, reembolso etc.). Não tem parcelamento, então regime de caixa
+-- e de competência são sempre o mesmo mês (mes_referencia).
+CREATE TABLE IF NOT EXISTS receitas (
+    id                    SERIAL PRIMARY KEY,
+    conta_id              INTEGER REFERENCES contas(id),
+    usuario_id            INTEGER NOT NULL REFERENCES usuarios(id),
+    tipo                  VARCHAR(20) NOT NULL DEFAULT 'salario', -- salario, outra
+    descricao             VARCHAR(200) NOT NULL,
+    data_recebimento      DATE NOT NULL,
+    mes_referencia        VARCHAR(7) NOT NULL, -- 'YYYY-MM'
+    salario_bruto         NUMERIC(12,2) DEFAULT 0,
+    inss                  NUMERIC(12,2) DEFAULT 0,
+    irrf                  NUMERIC(12,2) DEFAULT 0,
+    plano_saude           NUMERIC(12,2) DEFAULT 0,
+    plano_odontologico    NUMERIC(12,2) DEFAULT 0,
+    vale_alimentacao      NUMERIC(12,2) DEFAULT 0,
+    outros_descontos      NUMERIC(12,2) DEFAULT 0,
+    valor_liquido         NUMERIC(12,2) NOT NULL,
+    D_E_L_E_T             SMALLINT DEFAULT 0,
+    datestamp_insert      TIMESTAMP DEFAULT NOW(),
+    datestamp_update      TIMESTAMP
+);
+ALTER TABLE receitas ADD COLUMN IF NOT EXISTS conta_id INTEGER REFERENCES contas(id);
+CREATE INDEX IF NOT EXISTS idx_receitas_conta_mes ON receitas (conta_id, mes_referencia) WHERE D_E_L_E_T = 0;

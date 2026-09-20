@@ -3,6 +3,7 @@ from flask_login import current_user, login_required
 
 import db
 from helpers import (
+    FORMAS_PAGAMENTO,
     criar_despesa_avulsa,
     garantir_despesas_fixas_do_mes,
     mes_add,
@@ -17,17 +18,42 @@ bp = Blueprint("despesas", __name__)
 @login_required
 def index():
     mes = request.args.get("mes", mes_atual())
+    categoria_id = request.args.get("categoria_id") or ""
+    forma_pagamento = request.args.get("forma_pagamento") or ""
+    data_inicio = request.args.get("data_inicio") or ""
+    data_fim = request.args.get("data_fim") or ""
+
+    usa_periodo_customizado = bool(data_inicio and data_fim)
+
     garantir_despesas_fixas_do_mes(current_user.conta_id, mes)
 
+    condicoes = ["d.conta_id=%s", "d.D_E_L_E_T=0"]
+    params = [current_user.conta_id]
+
+    if usa_periodo_customizado:
+        condicoes.append("d.data_compra BETWEEN %s AND %s")
+        params += [data_inicio, data_fim]
+    else:
+        condicoes.append("d.mes_fatura=%s")
+        params.append(mes)
+
+    if categoria_id:
+        condicoes.append("d.categoria_id=%s")
+        params.append(categoria_id)
+    if forma_pagamento:
+        condicoes.append("d.forma_pagamento=%s")
+        params.append(forma_pagamento)
+
+    where_sql = " AND ".join(condicoes)
     lancamentos = db.query(
-        """SELECT d.*, c.nome AS categoria_nome, c.cor AS categoria_cor,
-                  ct.nome AS cartao_nome
-           FROM despesas d
-           LEFT JOIN categorias c ON c.id=d.categoria_id
-           LEFT JOIN cartoes ct ON ct.id=d.cartao_id
-           WHERE d.conta_id=%s AND d.mes_fatura=%s AND d.D_E_L_E_T=0
-           ORDER BY d.data_compra DESC, d.id DESC""",
-        (current_user.conta_id, mes),
+        f"""SELECT d.*, c.nome AS categoria_nome, c.cor AS categoria_cor,
+                   ct.nome AS cartao_nome
+            FROM despesas d
+            LEFT JOIN categorias c ON c.id=d.categoria_id
+            LEFT JOIN cartoes ct ON ct.id=d.cartao_id
+            WHERE {where_sql}
+            ORDER BY d.data_compra DESC, d.id DESC""",
+        tuple(params),
     )
     categorias = db.query(
         "SELECT * FROM categorias WHERE conta_id=%s AND D_E_L_E_T=0 ORDER BY nome",
@@ -49,6 +75,12 @@ def index():
         mes_label=mes_label(mes),
         mes_anterior=mes_add(mes, -1),
         mes_seguinte=mes_add(mes, 1),
+        categoria_id=categoria_id,
+        forma_pagamento=forma_pagamento,
+        data_inicio=data_inicio,
+        data_fim=data_fim,
+        usa_periodo_customizado=usa_periodo_customizado,
+        formas_pagamento=FORMAS_PAGAMENTO,
     )
 
 

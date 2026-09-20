@@ -41,6 +41,7 @@ from modules.despesas import bp as bp_despesas
 from modules.categorias import bp as bp_categorias
 from modules.fixas import bp as bp_fixas
 from modules.conta import bp as bp_conta
+from modules.receitas import bp as bp_receitas
 
 init_bcrypt(app)
 app.register_blueprint(bp_auth, url_prefix="/auth")
@@ -50,6 +51,7 @@ app.register_blueprint(bp_despesas, url_prefix="/despesas")
 app.register_blueprint(bp_categorias, url_prefix="/categorias")
 app.register_blueprint(bp_fixas, url_prefix="/fixas")
 app.register_blueprint(bp_conta, url_prefix="/conta")
+app.register_blueprint(bp_receitas, url_prefix="/receitas")
 
 
 @app.context_processor

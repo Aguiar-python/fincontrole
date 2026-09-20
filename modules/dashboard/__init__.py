@@ -6,38 +6,51 @@ from helpers import garantir_despesas_fixas_do_mes, mes_add, mes_atual, mes_labe
 
 bp = Blueprint("dashboard", __name__)
 
+# Regime de caixa: quanto efetivamente saiu do bolso naquele mês (parcelas
+# de cartão contam na fatura em que caem). Regime de competência: quanto
+# você se comprometeu a gastar naquele mês (uma compra parcelada conta
+# inteira no mês da compra).
+CAMPO_MES_POR_REGIME = {
+    "caixa": "mes_fatura",
+    "competencia": "mes_competencia",
+}
+
 
 @bp.route("/")
 @login_required
 def index():
     mes = request.args.get("mes", mes_atual())
+    regime = request.args.get("regime", "caixa")
+    if regime not in CAMPO_MES_POR_REGIME:
+        regime = "caixa"
+    campo_mes = CAMPO_MES_POR_REGIME[regime]
+
     garantir_despesas_fixas_do_mes(current_user.conta_id, mes)
 
-    total_mes = db.query_one(
-        """SELECT COALESCE(SUM(valor),0) AS total FROM despesas
-           WHERE conta_id=%s AND mes_fatura=%s AND D_E_L_E_T=0""",
+    total_despesas = db.query_one(
+        f"""SELECT COALESCE(SUM(valor),0) AS total FROM despesas
+            WHERE conta_id=%s AND {campo_mes}=%s AND D_E_L_E_T=0""",
         (current_user.conta_id, mes),
     )["total"]
 
-    por_categoria = db.query(
-        """SELECT c.nome, c.cor, COALESCE(SUM(d.valor),0) AS total
-           FROM categorias c
-           LEFT JOIN despesas d ON d.categoria_id=c.id AND d.mes_fatura=%s
-                                    AND d.D_E_L_E_T=0 AND d.conta_id=%s
-           WHERE c.conta_id=%s AND c.D_E_L_E_T=0
-           GROUP BY c.id, c.nome, c.cor
-           HAVING COALESCE(SUM(d.valor),0) > 0
-           ORDER BY total DESC""",
-        (mes, current_user.conta_id, current_user.conta_id),
-    )
-
-    por_forma = db.query(
-        """SELECT forma_pagamento, COALESCE(SUM(valor),0) AS total
-           FROM despesas
-           WHERE conta_id=%s AND mes_fatura=%s AND D_E_L_E_T=0
-           GROUP BY forma_pagamento
-           ORDER BY total DESC""",
+    total_receitas = db.query_one(
+        """SELECT COALESCE(SUM(valor_liquido),0) AS total FROM receitas
+           WHERE conta_id=%s AND mes_referencia=%s AND D_E_L_E_T=0""",
         (current_user.conta_id, mes),
+    )["total"]
+
+    saldo = float(total_receitas) - float(total_despesas)
+
+    por_categoria = db.query(
+        f"""SELECT c.nome, c.cor, COALESCE(SUM(d.valor),0) AS total
+            FROM categorias c
+            LEFT JOIN despesas d ON d.categoria_id=c.id AND d.{campo_mes}=%s
+                                     AND d.D_E_L_E_T=0 AND d.conta_id=%s
+            WHERE c.conta_id=%s AND c.D_E_L_E_T=0
+            GROUP BY c.id, c.nome, c.cor
+            HAVING COALESCE(SUM(d.valor),0) > 0
+            ORDER BY total DESC""",
+        (mes, current_user.conta_id, current_user.conta_id),
     )
 
     faturas_cartoes = db.query(
@@ -53,14 +66,14 @@ def index():
     )
 
     ultimos_lancamentos = db.query(
-        """SELECT d.*, c.nome AS categoria_nome, c.cor AS categoria_cor,
-                  ct.nome AS cartao_nome
-           FROM despesas d
-           LEFT JOIN categorias c ON c.id=d.categoria_id
-           LEFT JOIN cartoes ct ON ct.id=d.cartao_id
-           WHERE d.conta_id=%s AND d.mes_fatura=%s AND d.D_E_L_E_T=0
-           ORDER BY d.data_compra DESC, d.id DESC
-           LIMIT 8""",
+        f"""SELECT d.*, c.nome AS categoria_nome, c.cor AS categoria_cor,
+                   ct.nome AS cartao_nome
+            FROM despesas d
+            LEFT JOIN categorias c ON c.id=d.categoria_id
+            LEFT JOIN cartoes ct ON ct.id=d.cartao_id
+            WHERE d.conta_id=%s AND d.{campo_mes}=%s AND d.D_E_L_E_T=0
+            ORDER BY d.data_compra DESC, d.id DESC
+            LIMIT 8""",
         (current_user.conta_id, mes),
     )
 
@@ -70,9 +83,11 @@ def index():
         mes_label=mes_label(mes),
         mes_anterior=mes_add(mes, -1),
         mes_seguinte=mes_add(mes, 1),
-        total_mes=total_mes,
+        regime=regime,
+        total_despesas=total_despesas,
+        total_receitas=total_receitas,
+        saldo=saldo,
         por_categoria=por_categoria,
-        por_forma=por_forma,
         faturas_cartoes=faturas_cartoes,
         ultimos_lancamentos=ultimos_lancamentos,
     )

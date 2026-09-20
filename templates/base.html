@@ -32,6 +32,9 @@
       <a href="{{ url_for('despesas.index') }}" class="{{ 'active' if request.blueprint == 'despesas' }}">
         <i data-lucide="receipt"></i> Despesas
       </a>
+      <a href="{{ url_for('receitas.index') }}" class="{{ 'active' if request.blueprint == 'receitas' }}">
+        <i data-lucide="trending-up"></i> Receitas
+      </a>
       <a href="{{ url_for('cartoes.index') }}" class="{{ 'active' if request.blueprint == 'cartoes' }}">
         <i data-lucide="credit-card"></i> Cartões
       </a>
